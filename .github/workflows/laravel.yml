@@ -11,10 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Baixa o código do repositório
       - uses: actions/checkout@v4
 
-      # 2. Configura o PHP
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -22,42 +20,35 @@ jobs:
           extensions: mbstring, dom, curl, libxml, sqlite3
           coverage: none
 
-      # 3. Configura o Node.js (necessário para o Vite/Tailwind)
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      # 4. Prepara o ambiente (.env)
       - name: Copy .env
         run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
-      # 5. Instala dependências do PHP (Composer)
       - name: Install PHP Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
-      # 6. Instala dependências do JS e Compila o CSS/JS (Vite)
-      # Isso evita o erro "Vite manifest not found"
-      - name: Install & Build Frontend
+      # ESSA É A PARTE QUE CORRIGE O ERRO DO VITE
+      - name: Install JS Dependencies & Build
         run: |
           npm ci
           npm run build
 
-      # 7. Comandos de Inicialização do Laravel
       - name: Laravel Prepare
         run: |
           php artisan key:generate
           chmod -R 777 storage bootstrap/cache
 
-      # 8. Configura Banco de Dados SQLite para Testes
       - name: Database Setup
         run: |
           mkdir -p database
           touch database/database.sqlite
           php artisan migrate --force
 
-      # 9. Executa os Testes
       - name: Execute tests
         env:
           DB_CONNECTION: sqlite
