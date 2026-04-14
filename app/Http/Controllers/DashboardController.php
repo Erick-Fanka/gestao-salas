@@ -45,7 +45,6 @@ class DashboardController extends Controller
         $taxaOcupacao = $totalSalasAtivas > 0 ? round(($totalMesAtual / ($totalSalasAtivas * 66)) * 100, 1) : 0;
 
         // --- CORREÇÃO: SALAS MENOS USADAS ---
-        // Agora o filtro de modalidade e turno entra dentro do JOIN para o cálculo ser real
         $salasOciosas = Sala::where('salas.ativo', 1)
             ->leftJoin('reservas', function($join) use ($ano, $mes, $modalidadeFiltro, $turnoFiltro) {
                 $join->on('salas.id', '=', 'reservas.sala')
@@ -73,7 +72,6 @@ class DashboardController extends Controller
                                  ->whereRaw('DAYOFWEEK(data) = ?', [$num])
                                  ->where('turno', $tNum);
                 
-                // Aplica o filtro de modalidade no mapa também
                 if ($modalidadeFiltro) $qCalor->where('modalidade', $modalidadeFiltro);
                 
                 $mapaCalor[$nome][$tNome] = $qCalor->count();
@@ -186,11 +184,17 @@ class DashboardController extends Controller
 
         foreach ($salas as $s) {
             if (!in_array($s->id, $ocupadasIds)) {
+                // AQUI FOI A TROCA (LINHA 151):
+                // Verificamos se a chave existe; se não existir, usamos o próprio valor do filtro.
+                $exibirTurno = isset($nomesTurnos[$turnoFiltro]) 
+                    ? $nomesTurnos[$turnoFiltro] 
+                    : ($turnoFiltro ?: '-');
+
                 $dadosCompletos[] = [
                     'sala_nome' => $s->nome, 
-                    'turno' => ($turnoFiltro && isset($nomesTurnos[$turnoFiltro]) ? $nomesTurnos[$turnoFiltro] : '-'), 
+                    'turno'     => $exibirTurno, 
                     'professor' => '-', 
-                    'status' => 'Livre'
+                    'status'    => 'Livre'
                 ];
             }
         }
