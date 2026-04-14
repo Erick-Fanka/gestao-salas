@@ -55,3 +55,15 @@ jobs:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
       run: php artisan test
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Install Node dependencies
+      run: npm ci
+
+    - name: Build assets
+      run: npm run build
+      env:
+        NODE_ENV: production
