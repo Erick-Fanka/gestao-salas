@@ -1,4 +1,4 @@
-name: Laravel
+name: Laravel CI - SENAI Mauá
 
 on:
   push:
@@ -8,62 +8,58 @@ on:
 
 jobs:
   laravel-tests:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      # 1. Baixa o código do repositório
+      - uses: actions/checkout@v4
 
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.3'
+      # 2. Configura o PHP
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, curl, libxml, sqlite3
+          coverage: none
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+      # 3. Configura o Node.js (necessário para o Vite/Tailwind)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    - name: Copy .env
-      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      # 4. Prepara o ambiente (.env)
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
-    - name: Install PHP Dependencies
-      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      # 5. Instala dependências do PHP (Composer)
+      - name: Install PHP Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
-    - name: Install Node dependencies
-      run: npm install
+      # 6. Instala dependências do JS e Compila o CSS/JS (Vite)
+      # Isso evita o erro "Vite manifest not found"
+      - name: Install & Build Frontend
+        run: |
+          npm ci
+          npm run build
 
-    - name: Build assets
-      run: npm run build
+      # 7. Comandos de Inicialização do Laravel
+      - name: Laravel Prepare
+        run: |
+          php artisan key:generate
+          chmod -R 777 storage bootstrap/cache
 
-    - name: Generate key
-      run: php artisan key:generate
+      # 8. Configura Banco de Dados SQLite para Testes
+      - name: Database Setup
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+          php artisan migrate --force
 
-    - name: Directory Permissions
-      run: chmod -R 777 storage bootstrap/cache
-
-    - name: Create Database
-      run: |
-        mkdir -p database
-        touch database/database.sqlite
-
-    - name: Run migrations
-      run: php artisan migrate --force
-
-    - name: Execute tests
-      env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
-      run: php artisan test
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
-
-    - name: Install Node dependencies
-      run: npm ci
-
-    - name: Build assets
-      run: npm run build
-      env:
-        NODE_ENV: production
+      # 9. Executa os Testes
+      - name: Execute tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan test
